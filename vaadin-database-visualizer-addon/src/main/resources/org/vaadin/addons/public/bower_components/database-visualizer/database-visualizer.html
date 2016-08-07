@@ -1,0 +1,552 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<link rel="import" href="elements/database-schema.html">
+<link rel="import" href="elements/database-minimap.html">
+
+<!--
+An element providing a solution for a visualization of a relational database.
+
+Example:
+
+    <database-visualizer></database-visualizer>
+
+### Database
+
+The database json structure should be build like this:
+
+    {
+        "id": 1,
+        "schemas": [
+            {
+                "id": 641148,
+                "name": "BP_ADMIN",
+                "schemaId": 701,
+                "left": -2000,
+                "top": -2000,
+                "width": 3926,
+                "height": 1852,
+                "tables": [
+                    {
+                        "id": 641164,
+                        "name": "DOCKER_APPLICATION_DEPLOYMENT",
+                        "tableId": 3770775,
+                        "left": 2877,
+                        "top": 765,
+                        "columns": [
+                            {
+                                "id": 641287,
+                                "name": "APPLICATION_DEPLOYMENT_ID",
+                                "columnId": 1,
+                                "keyType": "PK",
+                                "nullable": false,
+                                "type": "NUMBER(22)",
+                                "defaultValue": ""
+                            },
+                            …
+                        ],
+                        "constraints": [
+                            {
+                                "positions": [
+                                    {
+                                        "id": 653024,
+                                        "position": {
+                                            "x": 1,
+                                            "y": 2
+                                        },
+                                        …
+                                    }
+                                ],
+                                "isConnectedLeft": false,
+                                "isConnectedLeftRef": true,
+                                "id": 641403,
+                                "name": "FK_DOCK_APP_DEP_APP",
+                                "schema": "BP_ADMIN",
+                                "table": "DOCKER_APPLICATION_DEPLOYMENT",
+                                "columns": [
+                                    "APPLICATION_ID"
+                                ],
+                                "rschema": "BP_ADMIN",
+                                "rtable": "DOCKER_APPLICATION",
+                                "rcolumns": [
+                                    "APPLICATION_ID"
+                                ]
+                            }
+                        ]
+                    },
+                    …
+                ]
+            }
+        ]
+    }
+
+### Styling
+
+The following custom properties and mixins are available for styling:
+
+| Custom property | Description | Default |
+| --- | --- | --- |
+| `--database-visualizer-spinner-color` | The color of the spinner color when loading database | `--accent-color` |
+||||
+||||
+||||
+| `table` |||
+| `--database-table-background` | The background color of the table | `--primary-color` |
+| `--database-table-color` | The color of the table | `white` |
+| `--database-table-selected-background` | The background color of the selected table | `--light-accent-color` |
+| `--database-table-selected-color` | The color of the selected table | `white` |
+||||
+||||
+||||
+| `schema` |||
+| `--database-schema-background` | The background color of the schema | `--primary-color` |
+| `--database-schema-color` | The color of the schema | `white` |
+| `--database-schema-selected-background` | The background color of the selected schema | `--light-accent-color` |
+| `--database-schema-selected-color` | The color of the selected schema | `white` |
+| `--database-schema-resize-button-background` | The background color of the resize button of the schema | `--accent-color` |
+||||
+||||
+||||
+| `column` |||
+| `--database-column-higlight-background` | The background color of the highlighted column | `--accent-color` |
+| `--database-column-higlight-color` | The color of the highlighted column | `white` |
+| `--database-column-even-background` | The background color of the even column | `#ECECEC` |
+||||
+||||
+||||
+| `constraint` |||
+| `--database-constraint-hover-background` | The hover background color of the constraint | `--light-accent-color` |
+| `--database-constraint-line-selected-stroke` | The stroke color of the selected constraint | `--light-accent-color` |
+| `--database-constraint-line-highlighted-stroke` | The stroke color of the highlighted constraint | `--accent-color` |
+| `--database-constraint-line-button-move-background` | The background color of the constraint move button | `--accent-color` |
+| `--database-constraint-line-button-add-background` | The background color of the constraint add button | `--light-accent-color` |
+| `--database-constraint-line-connect-background` | The background color of the constraint connect button | `--accent-color` |
+
+@demo
+-->
+<dom-module id="database-visualizer">
+
+    <style>
+        :host {
+        	position: relative;
+            overflow: hidden;
+            font-family: 'Roboto', 'Noto', sans-serif;
+            display: block;
+            box-sizing: content-box;
+            height: 100%;
+            width: 100%;
+            background-color: #ECECEC;
+            cursor: -webkit-grab;
+
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            
+        }
+
+        h1 {
+            color: #DCDCDC !important;
+            padding: 15px;
+            margin: 0 !important;
+            position: absolute;
+            bottom: 0px;
+            right: 0px;
+
+            -webkit-touch-callout: none; /* iOS Safari */
+            -webkit-user-select: none;   /* Chrome/Safari/Opera */
+            -khtml-user-select: none;    /* Konqueror */
+            -moz-user-select: none;      /* Firefox */
+            -ms-user-select: none;       /* Internet Explorer/Edge */
+            user-select: none;           /* Non-prefixed version, currently
+                                  not supported by any browser */
+        }
+
+        #canvas {
+            position: absolute;
+            cursor: -webkit-grab;
+            font-size: 14px;
+            line-height: 20px;
+            overflow-x: visible;
+            overflow-y: visible;
+            width: 50px;
+            height: 50px;
+        }
+
+        #loading {
+            background: rgba(255,255,255,0.5);
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            left: 0px;
+            top: 0px;
+            z-index: 92;
+        }
+        #loading.hidden {
+            visibility: hidden;
+        }
+        #loading paper-spinner-lite {
+            position: absolute !important;
+            left: 50%;
+            top: 50%;
+            margin-left: -14px;
+            margin-top: -14px;
+        }
+
+        paper-spinner-lite {
+            --paper-spinner-color: var(--database-visualizer-spinner-color, --accent-color);
+        }
+
+    </style>
+
+    <template>
+        <h1>&lt;database-visualizer/&gt;</h1>
+        <div id="loading" class="loading hidden">
+            <paper-spinner-lite active></paper-spinner-lite>
+        </div>
+        <database-minimap id="minimap"></database-minimap>
+        <div id="canvas" class="database-visualizer-canvas" style="left: 0px; top: 0px;">
+            <template is="dom-repeat" items="{{database.schemas}}">
+                <database-schema id="{{item.name}}" schema="{{item}}"></database-schema>
+            </template>
+            <div id="storage" class="database-constraints-storage"></div>
+        </div>
+    </template>
+
+</dom-module>
+
+<script>
+    Polymer({
+
+        is: 'database-visualizer',
+        /**
+         * Fired when `schema` position and/or size is updated.
+         *
+         * @event update-schema
+         */
+
+        /**
+         * Fired when `table` position is updated.
+         *
+         * @event update-table
+         */
+
+        /**
+         * Fired when `constraint` point positions is updated and/or `connector` was switched.
+         *
+         * @event update-constraint
+         */
+        listeners: {
+            'tap': '_handleTap',
+            'track': '_handleTrack',
+            'mousewheel': '_handleMousewheel'
+        },
+        properties: {
+            _translate: {
+                type: Object,
+                value: {
+                    x: 0,
+                    y: 0
+                },
+                observer: '_observerTranslate'
+            },
+            _scale: {
+                type: Number,
+                value: 1,
+                observer: '_observerScale'
+            },
+            _transformOrigin: {
+                type: Object,
+                value: {
+                    x: 0,
+                    y: 0
+                },
+                observer: '_observerTransformOrigin'
+            },
+            /**
+             * Json as descript above
+             */
+            database: {
+                type: Object,
+                value: function () {
+                    return {};
+                },
+                observer: '_observerDatabase'
+            },
+
+            _schemas: {
+                type: Array,
+                notify: true,
+                value: function () {
+                    return [];
+                }
+            }
+        },
+        _scaleTranslate3d: function () {
+            var scale = this._getScale();
+            var x = this._translate.x + 'px';
+            var y = this._translate.y + 'px';
+            var z = '0px';
+            var node = this.$.canvas;
+            this.transform('scale(' + scale + ')' + 'translate3d(' + x + ',' + y + ',' + z + ')', node);
+        },
+
+        _observerTranslate() {
+            this._scaleTranslate3d();
+        },
+        _observerScale() {
+            this._scaleTranslate3d();
+        },
+        _observerTransformOrigin(transformOrigin) {
+            var node = this.$.canvas;
+            node.style.transformOrigin = transformOrigin.x + 'px ' + transformOrigin.y + 'px';
+        },
+
+        _onTap: function () {
+            Array.prototype.slice.call(document.querySelectorAll('database-constraint-line')).forEach(function (databaseConstraintLine) {
+                databaseConstraintLine.deselect();
+            });
+        },
+        _handleTap: function (e) {
+            if (e.target === this) {
+                this._onTap();
+            }
+        },
+
+        _handleTrack: function (e) {
+            if (e.target === this) {
+                this._onTrack(e);
+            }
+        },
+
+        _handleMousewheel: function (e) {
+            // cross-browser wheel delta
+            e = window.event || e; // old IE support
+            var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
+
+            e.preventDefault();
+
+            if (delta !== 0) {
+                // find current location on screen
+                var screen = {
+                    x: event.pageX - this.offsetLeft,
+                    y: event.pageY - this.offsetTop
+                };
+
+                // find current location on the image at the current scale
+                this._transformOrigin = {
+                    x: this._transformOrigin.x + ((screen.x - this._last.x) / this._getScale()),
+                    y: this._transformOrigin.y + ((screen.y - this._last.y) / this._getScale())
+                };
+
+                // determine the new scale
+                var rate = 30;
+                var scale = this._getScale() * (1 + delta / rate);
+                if (scale < 0.05) {
+                    scale = 0.05;
+                } else if (scale > 3) {
+                    scale = 3;
+                }
+
+                // determine the location on the screen at the new scale
+                this._translate = {
+                    x: (screen.x - this._transformOrigin.x) / scale + this._move.x,
+                    y: (screen.y - this._transformOrigin.y) / scale + this._move.y
+                };
+
+                this._setScale(scale);
+
+                // save the current screen location
+                this._last = screen;
+
+                this._refreshMinimapZoom();
+            }
+        },
+
+        _onTrack: function (e) {
+            switch (e.detail.state) {
+                case 'start':
+                    e.target.style.cursor = '-webkit-grabbing';
+
+                    this._track = {
+                        x: this._translate.x,
+                        y: this._translate.y
+                    };
+                    this._translate = {
+                        x: this._track.x + e.detail.dx / this._getScale(),
+                        y: this._track.y + e.detail.dy / this._getScale()
+                    };
+                    break;
+                case 'track':
+                    this._translate = {
+                        x: this._track.x + e.detail.dx / this._getScale(),
+                        y: this._track.y + e.detail.dy / this._getScale()
+                    };
+                    break;
+                case 'end':
+                    e.target.style.cursor = '';
+
+                    this._translate = {
+                        x: this._track.x + e.detail.dx / this._getScale(),
+                        y: this._track.y + e.detail.dy / this._getScale()
+                    };
+
+                    this._move = {
+                        x: this._move.x + this._translate.x - this._track.x,
+                        y: this._move.y + this._translate.y - this._track.y
+                    };
+                    break;
+            }
+
+            this._refreshMinimapZoom();
+        },
+
+        _observerDatabase() {
+            this._schemas = [];
+
+            this._scale = 1;
+
+            this._move = {
+                x: 0,
+                y: 0
+            };
+
+            this._transformOrigin = {
+                x: 0,
+                y: 0
+            };
+
+            this._last = {
+                x: 0,
+                y: 0
+            };
+
+
+            this.$.minimap.classList.add('hidden');
+            Array.prototype.slice.call(document.querySelectorAll('database-constraint-line')).forEach(function (databaseConstraintLine) {
+                databaseConstraintLine.remove();
+            });
+        },
+
+        _getSchemas() {
+            return this._schemas;
+        },
+        _registerSchema(schema) {
+            this._getSchemas().push(schema);
+
+            if (this.database.schemas.length === this._getSchemas().length) {
+                var mostLeft = null;
+                var mostRight = null;
+                var mostTop = null;
+                var mostBottom = null;
+                var mostLeftOffset = null;
+                var mostTopOffset = null;
+                this._getSchemas().forEach(function (schema) {
+                    if (mostLeft === null || mostLeft > schema.getLeft()) {
+                        mostLeft = schema.getLeft();
+                    }
+                    if (mostTop === null || mostTop > schema.getTop()) {
+                        mostTop = schema.getTop();
+                    }
+                    if (mostRight === null || mostRight < schema.getLeft() + schema.getWidth()) {
+                        mostRight = schema.getLeft() + schema.getWidth();
+                    }
+                    if (mostBottom === null || mostBottom < schema.getTop() + schema.getHeight()) {
+                        mostBottom = schema.getTop() + schema.getHeight();
+                    }
+                    if (mostLeftOffset === null || mostLeftOffset > schema.translate.x) {
+                        mostLeftOffset = schema.translate.x;
+                    }
+                    if (mostTopOffset === null || mostTopOffset > schema.translate.y) {
+                        mostTopOffset = schema.translate.y;
+                    }
+                });
+                var width = mostRight - mostLeft;
+                var height = mostBottom - mostTop;
+                var widthRatio = this.offsetWidth / width - 0.05;
+                var heightRatio = this.offsetHeight / height - 0.05;
+
+                this._setScale(widthRatio < heightRatio ? widthRatio : heightRatio);
+
+                this._translate = {
+                    x: (this.offsetWidth / this._getScale() - width) / 2 - mostLeftOffset,
+                    y: (this.offsetHeight / this._getScale() - height) / 2 - mostTopOffset
+                };
+
+                this._move = this._translate;
+
+                this._transformOrigin = {
+                    x: 0,
+                    y: 0
+                };
+
+                this._refresh();
+                this._refreshMinimap();
+                this.$.loading.classList.add('hidden');
+                this.$.minimap.classList.remove('hidden');
+            }
+        },
+
+        _getScale() {
+            return this._scale;
+        },
+
+        _setScale(scale) {
+            return this._scale = scale;
+        },
+
+        _refreshMinimapZoom() {
+            this.$.minimap._refreshMinimapZoom();
+        },
+
+        _refreshMinimap() {
+            this.$.minimap.refreshMinimap();
+        },
+
+        _refresh() {
+            this._getSchemas().forEach(function (schema) {
+                schema.refresh();
+            });
+        },
+
+        // Element Lifecycle
+
+        ready: function () {
+            // `ready` is called after all elements have been configured, but
+            // propagates bottom-up. This element's children are ready, but parents
+            // are not.
+            //
+            // This is the point where you should make modifications to the DOM (when
+            // necessary), or kick off any processes the element wants to perform.
+        	this.fire('ready');
+        },
+
+        attached: function () {
+            // `attached` fires once the element and its parents have been inserted
+            // into a document.
+            //
+            // This is a good place to perform any work related to your element's
+            // visual state or active behavior (measuring sizes, beginning animations,
+            // loading resources, etc).
+
+        },
+
+
+        detached: function () {
+            // The analog to `attached`, `detached` fires when the element has been
+            // removed from a document.
+            //
+            // Use this to clean up anything you did in `attached`.
+        }
+
+    });
+
+</script>

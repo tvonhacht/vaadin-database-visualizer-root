@@ -1,0 +1,24 @@
+{
+  "name": "database-visualizer",
+  "version": "0.0.3",
+  "description": "An element providing a solution for visualizing a database.",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "install": "node_modules/.bin/bower install --allow-root"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thorbenvh8/database-visualizer.git"
+  },
+  "author": "Thorben von Hacht <thorben@vh8.de>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thorbenvh8/database-visualizer/issues"
+  },
+  "homepage": "https://github.com/thorbenvh8/database-visualizer#readme",
+  "dependencies": {
+    "bower": "latest"
+  }
+}

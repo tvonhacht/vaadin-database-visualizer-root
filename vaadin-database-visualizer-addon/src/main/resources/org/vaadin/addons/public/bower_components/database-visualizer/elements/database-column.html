@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="import" href="../../polymer/polymer.html">
+</head>
+
+<dom-module id="database-column">
+    <style>
+        /* CSS rules for your element */
+        :host {
+            display: table-row;
+            width: auto;
+        }
+
+        :host:nth-child(even) {
+            background: var(--database-column-even-background, #ECECEC);
+        }
+
+        :host.highlighted,
+        :host.highlighted:nth-child(even) {
+            background: var(--database-column-higlight-background, --accent-color);
+            color: var(--database-column-higlight-color, white);
+        }
+
+        :host .database-column.table-column {
+            display: table-cell;
+            padding: 5px;
+            min-width: 20px;
+        }
+
+    </style>
+    <template>
+        <div class="table-column">{{column.keyType}}</div>
+        <div class="table-column">{{convertToNullableString(column.nullable)}}</div>
+        <div class="table-column">{{column.name}}</div>
+        <div class="table-column">{{column.type}}</div>
+        <div class="table-column">{{column.defaultValue}}</div>
+    </template>
+</dom-module>
+<script>
+    Polymer({
+        is: "database-column",
+
+        properties: {
+            schemaname: String,
+            tablename: String,
+            column: {
+                type: Object,
+                notify: true,
+                value: function () {
+                    return {
+                        name: "column1"
+                    };
+                }
+            }
+        },
+
+        convertToNullableString(b) {
+            return b ? "" : "*";
+        },
+
+        getPosition() {
+            return {
+                top: this.offsetTop,
+                left: this.offsetLeft
+            }
+        },
+
+        ready: function () {
+
+        },
+
+        attached: function () {
+            var table = document.querySelector('#' + this.schemaname + "_" + this.tablename);
+            table.registerColumn(this);
+        }
+    });
+</script>
+</html>

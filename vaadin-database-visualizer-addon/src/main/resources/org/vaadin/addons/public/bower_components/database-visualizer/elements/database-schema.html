@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Element Imports -->
+    <link rel="import" href="database-table.html">
+    <link rel="import" href="../../paper-fab/paper-fab.html">
+    <link rel="import" href="../../iron-icons/iron-icons.html">
+</head>
+
+<dom-module id="database-schema">
+    <style>
+        :host {
+            position: absolute;
+            display: block;
+            box-sizing: border-box;
+            box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+            background: white;
+        }
+
+        :host h2 {
+            margin: 0 !important;
+            font-size: 72px;
+            line-height: 2em;
+            text-align: center;
+            font-weight: bold;
+            color: var(--database-schema-color, white);
+        }
+
+        #header {
+            background: var(--database-schema-background, --dark-primary-color);
+            border-bottom: 1px solid #e5e5e5;
+            cursor: move;
+        }
+
+        :host.selected #header {
+            background: var(--database-schema-selected-background, --light-accent-color);
+            color: var(--database-schema-selected-color, white);
+        }
+
+        paper-fab {
+            --paper-fab-background: var(--database-schema-resize-button-background, --accent-color);
+            --paper-fab-iron-icon: {
+                transform: rotate(45deg);
+            };
+
+            visibility: hidden;
+            position: absolute;
+        }
+
+        :host.selected paper-fab {
+            visibility: visible;
+        }
+
+        paper-fab[icon="arrow-back"] {
+            left: -20px;
+            top: -20px;
+        }
+
+        paper-fab[icon="arrow-upward"] {
+            right: -20px;
+            top: -20px;
+        }
+
+        paper-fab[icon="arrow-forward"] {
+            right: -20px;
+            bottom: -20px;
+        }
+
+        paper-fab[icon="arrow-downward"] {
+            left: -20px;
+            bottom: -20px;
+        }
+
+    </style>
+    <template>
+        <div id="header" class="database-visualizer-div-header">
+            <h2>{{schema.name}}</h2>
+        </div>
+        <paper-fab id="resize-nw" icon="arrow-back" title="resize" suffix></paper-fab>
+        <paper-fab id="resize-ne" icon="arrow-upward" title="resize" suffix></paper-fab>
+        <paper-fab id="resize-se" icon="arrow-forward" title="resize" suffix></paper-fab>
+        <paper-fab id="resize-sw" icon="arrow-downward" title="resize" suffix></paper-fab>
+        <template is="dom-repeat" items="{{schema.tables}}">
+            <database-table id="{{schema.name}}_{{item.name}}" schemaname="{{schema.name}}"
+                            table="{{item}}"></database-table>
+        </template>
+    </template>
+</dom-module>
+<script>
+    Polymer({
+        is: "database-schema",
+        listeners: {
+            'header.tap': '_handleHeaderTap',
+            'header.track': '_handleHeaderTrack',
+            'resize-nw.track': '_handleResizeNwTrack',
+            'resize-ne.track': '_handleResizeNeTrack',
+            'resize-se.track': '_handleResizeSeTrack',
+            'resize-sw.track': '_handleResizeSwTrack',
+            'tap': '_handleTap',
+            'track': '_handleTrack'
+        },
+        properties: {
+            selected: {
+                type: Boolean,
+                notify: true,
+                value: false,
+                observer: '_observerSelected'
+            },
+            translate: {
+                type: Object,
+                value: {
+                    x: 0,
+                    y: 0
+                },
+                observer: '_observerTranslate'
+            },
+            width: {
+                type: Number,
+                value: null,
+                observer: '_observerWidth'
+            },
+            height: {
+                type: Number,
+                value: null,
+                observer: '_observerHeight'
+            },
+            schema: {
+                type: Object,
+                notify: true,
+                value: function () {
+                    return {
+                        name: "schema1",
+                        tables: [{name: "table1"}],
+                        left: 400
+                    };
+                }
+            },
+            visualizer: {
+                type: Object,
+                notify: true,
+                value: function () {
+                    return {};
+                }
+            },
+            tables: {
+                type: Array,
+                notify: true,
+                value: function () {
+                    return [];
+                }
+            }
+        },
+
+        _onHeaderTap: function () {
+            if (this.isSelected()) {
+                this.deselect();
+            } else {
+                this.select();
+            }
+        },
+        _handleHeaderTap: function (e) {
+            this._onHeaderTap();
+        },
+
+        _handleHeaderTrack: function (e) {
+            switch (e.detail.state) {
+                case 'start':
+                    this._track = {
+                        x: this.translate.x,
+                        y: this.translate.y
+                    };
+                    this._trackStart();
+                    this.translate = {
+                        x: this._track.x + e.detail.dx / this.getScale(),
+                        y: this._track.y + e.detail.dy / this.getScale()
+                    };
+
+                    this._tracking({
+                        x: e.detail.dx / this.getScale(),
+                        y: e.detail.dy / this.getScale()
+                    });
+
+                    this.refresh();
+                    break;
+                case 'track':
+                    this.translate = {
+                        x: this._track.x + e.detail.dx / this.getScale(),
+                        y: this._track.y + e.detail.dy / this.getScale()
+                    };
+
+                    this._tracking({
+                        x: e.detail.dx / this.getScale(),
+                        y: e.detail.dy / this.getScale()
+                    });
+
+                    this.refresh();
+                    break;
+                case 'end':
+                    this.translate = {
+                        x: this._track.x + e.detail.dx / this.getScale(),
+                        y: this._track.y + e.detail.dy / this.getScale()
+                    };
+
+                    this._tracking({
+                        x: e.detail.dx / this.getScale(),
+                        y: e.detail.dy / this.getScale()
+                    });
+
+                    this.refresh();
+                    this.refreshMinimap();
+
+                    this.tables.forEach(function (table) {
+                        table._constraints.forEach(function(constraint) {
+                            constraint._tracking = false;
+                        });
+                    });
+
+                    this.fireUpdateSchema();
+                    break;
+            }
+        },
+
+        _onTap: function () {
+            Array.prototype.slice.call(document.querySelectorAll('database-constraint-line')).forEach(function (databaseConstraintLine) {
+                databaseConstraintLine.deselect();
+            });
+        },
+        _handleTap: function (e) {
+            if (e.target === this) {
+                this._onTap();
+            }
+        },
+        _handleTrack: function (e) {
+            if (e.target === this) {
+                this.visualizer._onTrack(e);
+            }
+        },
+
+        _handleResizeNwTrack: function (e) {
+            this._handleResizeTrack("nw", e);
+        },
+        _handleResizeNeTrack: function (e) {
+            this._handleResizeTrack("ne", e);
+        },
+        _handleResizeSeTrack: function (e) {
+            this._handleResizeTrack("se", e);
+        },
+        _handleResizeSwTrack: function (e) {
+            this._handleResizeTrack("sw", e);
+        },
+        _handleResizeTrack: function (direction, e) {
+console.log("state: " + e.detail.state);
+            switch (e.detail.state) {
+                case 'start':
+                    this._track = {
+                        x: this.translate.x,
+                        y: this.translate.y
+                    };
+                    this._resize = {
+                        width: this.width,
+                        height: this.height
+                    };
+
+                    this.tables.forEach(function (table) {
+                        table._track = {
+                            x: table.translate.x,
+                            y: table.translate.y
+                        };
+
+                        table._constraints.forEach(function(constraint) {
+                            constraint._tracking = true;
+                        });
+                    });
+
+                    this._resizing(direction, e);
+
+                    this.refresh();
+                    this.refreshMinimap();
+                    break;
+                case 'track':
+                    this._resizing(direction, e);
+
+                    this.refresh();
+                    this.refreshMinimap();
+                    break;
+                case 'end':
+                    this._resizing(direction, e);
+
+                    this.refresh();
+                    this.refreshMinimap();
+
+                    this.tables.forEach(function (table) {
+                        table._constraints.forEach(function(constraint) {
+                            constraint._tracking = false;
+                        });
+                    });
+
+                    this.fireUpdateSchemaWithTables();
+                    break;
+            }
+
+
+
+        },
+        _resizing(direction, e) {
+
+            var left = e.detail.dx / this.getScale();
+            var top = e.detail.dy / this.getScale();
+            var right = 0;
+            var bottom = 0;
+
+            this.tables.forEach(function (table) {
+                left = left > table._track.x ? table._track.x : left;
+                top = top > table._track.y ? table._track.y : top;
+                right = right < table._track.x + table.offsetWidth ? table._track.x + table.offsetWidth : right;
+                bottom = bottom < table._track.y + table.offsetHeight + this.getHeaderHeight() ? table._track.y + table.offsetHeight + this.getHeaderHeight() : bottom;
+            }, this);
+
+            var width = this._resize.width;
+            var height = this._resize.height;
+            var x = this._track.x;
+            var y = this._track.y;
+            if (direction.indexOf("n") >= 0) {
+                height -= top;
+                y += top;
+            }
+            if (direction.indexOf("e") >= 0) {
+                width += e.detail.dx / this.getScale();
+            }
+            if (direction.indexOf("s") >= 0) {
+                height += e.detail.dy / this.getScale();
+            }
+            if (direction.indexOf("w") >= 0) {
+                width -= left;
+                x += left;
+            }
+
+            this.translate = {
+                x,
+                y
+            };
+
+            this.tables.forEach(function (table) {
+                var x = table._track.x;
+                var y = table._track.y;
+                if (direction.indexOf("n") >= 0) {
+                    y -= top;
+                }
+                if (direction.indexOf("w") >= 0) {
+                    x -= left;
+                }
+                table.translate = {
+                    x,
+                    y
+                };
+            });
+
+            if (left > 0) {
+                this.width = width;
+            } else {
+                this.width = width < right ? right : width;
+            }
+
+            if (top > 0) {
+                this.height = height;
+            } else {
+                this.height = height < bottom ? bottom : height;
+            }
+        },
+
+        _observerSelected: function (selected) {
+            if (selected) {
+                this.classList.add('selected');
+            } else {
+                this.classList.remove('selected');
+            }
+        },
+        _observerTranslate(translate) {
+            this.translate3d(translate.x + 'px', translate.y + 'px', '0px');
+        },
+        _observerWidth(width) {
+            this.style.width = width + 'px';
+        },
+        _observerHeight(height) {
+            this.style.height = height + 'px';
+        },
+
+        registerTable(table) {
+            this.tables.push(table);
+
+            if (this.schema.tables.length === this.tables.length) {
+                this.visualizer._registerSchema(this);
+            }
+        },
+
+        isSelected() {
+            return this.selected;
+        },
+        select() {
+            this.selected = true;
+        },
+        deselect() {
+            this.selected = false;
+        },
+
+        getScale() {
+            return this.visualizer._getScale();
+        },
+
+        getTables() {
+            return this.tables;
+        },
+
+        refresh() {
+            this.getTables().forEach(function (table) {
+                table.refresh();
+            });
+        },
+
+        _trackStart() {
+            this.getTables().forEach(function (table) {
+                table._constraints.forEach(function (constraint) {
+                    constraint._tracking = true;
+                    constraint._points.forEach(function (point) {
+                        point.trackStartSchema();
+                    });
+                });
+            });
+        },
+        _tracking(trackPoint) {
+            this.getTables().forEach(function (table) {
+                table._constraints.forEach(function (constraint) {
+                    constraint._points.forEach(function (point) {
+                        point.trackSchema(trackPoint);
+                    });
+                });
+            });
+        },
+
+        getTop() {
+            return this.translate.y;
+        },
+        getHeight() {
+            return this.height;
+        },
+        getLeft() {
+            return this.translate.x;
+        },
+        getWidth() {
+            return this.width;
+        },
+
+        getHeaderHeight() {
+            return this.$.header.offsetHeight;
+        },
+
+        setMinWidth(minWidth) {
+            if (this.width < minWidth) {
+                this.width = minWidth;
+            }
+        },
+        setMinHeight(minHeight) {
+            if (this.height < minHeight) {
+                this.height = minHeight;
+            }
+        },
+
+        refreshMinimap() {
+            this.visualizer._refreshMinimap();
+        },
+
+        fireUpdateSchema() {
+            this.fire('update-schema', {
+                dvSchemaId: this.schema.id,
+                left: Math.round(this.translate.x),
+                top: Math.round(this.translate.y),
+                width: Math.round(this.width),
+                height: Math.round(this.height - this.getHeaderHeight())
+            });
+        },
+
+        fireUpdateSchemaWithTables() {
+            this.fireUpdateSchema();
+            this.getTables().forEach(function (table) {
+                table.fireUpdateTable();
+                table._constraints.forEach(function(constraint) {
+                    constraint.fireUpdateConstraint();
+                });
+            });
+        },
+
+        ready: function () {
+        },
+
+        attached: function () {
+            this.visualizer = document.querySelector('database-visualizer');
+
+            this.width = this.schema.width;
+            this.height = this.schema.height + this.getHeaderHeight();
+
+            this.translate = {
+                x: this.schema.left,
+                y: this.schema.top
+            };
+        },
+        getPosition() {
+            return {
+                left: this.getLeft(),
+                top: this.getTop() + this.getHeaderHeight(),
+                width: this.offsetWidth,
+                height: this.offsetHeight
+            };
+        }
+    });
+</script>
+</html>

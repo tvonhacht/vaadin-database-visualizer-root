@@ -1,0 +1,297 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<!--
+An element providing a solution to no problem in particular.
+
+Example:
+
+    <database-visualizer></database-visualizer>
+
+@demo
+-->
+<dom-module id="database-minimap">
+
+    <style>
+
+        :host {
+            position: absolute;
+            border-radius: 3px;
+            background: white;
+            overflow: hidden;
+            width: 150px;
+            height: 150px;
+            top: 30px;
+            right: 30px;
+            z-index: 5;
+            border: #ECECEC 1px solid;
+            cursor: initial;
+        }
+
+        :host .zoom {
+            position: absolute;
+            background: rgba(255,100,100,0.4);
+            cursor: move;
+            z-index: 10;
+        }
+
+        :host .schema,
+        :host .table {
+            background: rgba(0,0,100,0.2);
+            position: absolute;
+        }
+
+        :host.hidden {
+            visibility: hidden;
+        }
+
+    </style>
+
+    <template>
+        <div id="zoom" class="zoom"></div>
+    </template>
+
+</dom-module>
+
+<script>
+    Polymer({
+
+        is: 'database-minimap',
+        listeners: {
+            'zoom.track': '_handleZoomTrack'
+        },
+        properties: {
+            translate: {
+                type: Object,
+                value: {
+                    x: 0,
+                    y: 0
+                },
+                observer: '_observerTranslate'
+            },
+            width: {
+                type: Number,
+                value: null,
+                observer: '_observerWidth'
+            },
+            height: {
+                type: Number,
+                value: null,
+                observer: '_observerHeight'
+            }
+        },
+
+        _observerTranslate(translate) {
+            this.translate3d(translate.x + 'px', translate.y + 'px', '0px', this.$.zoom);
+        },
+        _observerWidth(width) {
+            this.$.zoom.style.width = width + 'px';
+        },
+        _observerHeight(height) {
+            this.$.zoom.style.height = height + 'px';
+        },
+
+        _handleZoomTrack(e) {
+            switch (e.detail.state) {
+                case 'start':
+                    this.visualizer._track = {
+                        x: this.visualizer._translate.x,
+                        y: this.visualizer._translate.y
+                    };
+                    this.visualizer._translate = {
+                        x: this.visualizer._track.x - e.detail.dx * this.getMinimapWidth() / 150,
+                        y: this.visualizer._track.y - e.detail.dy * this.getMinimapWidth() / 150
+                    };
+
+                    this._track = {
+                        x: this.translate.x,
+                        y: this.translate.y
+                    };
+                    this.translate = {
+                        x: this._track.x + e.detail.dx,
+                        y: this._track.y + e.detail.dy
+                    };
+
+                    break;
+                case 'track':
+                    this.visualizer._translate = {
+                        x: this.visualizer._track.x - e.detail.dx * this.getMinimapWidth() / 150,
+                        y: this.visualizer._track.y - e.detail.dy * this.getMinimapWidth() / 150
+                    };
+
+                    this.translate = {
+                        x: this._track.x + e.detail.dx,
+                        y: this._track.y + e.detail.dy
+                    };
+
+                    break;
+                case 'end':
+                    this.visualizer._translate = {
+                        x: this.visualizer._track.x - e.detail.dx * this.getMinimapWidth() / 150,
+                        y: this.visualizer._track.y - e.detail.dy * this.getMinimapWidth() / 150
+                    };
+
+                    this.visualizer._move = {
+                        x: this.visualizer._move.x + this.visualizer._translate.x - this.visualizer._track.x,
+                        y: this.visualizer._move.y + this.visualizer._translate.y - this.visualizer._track.y
+                    };
+
+                    this.translate = {
+                        x: this._track.x + e.detail.dx,
+                        y: this._track.y + e.detail.dy
+                    };
+
+                    break;
+            }
+        },
+
+        setMinimapWidth(minimapWidth) {
+            this._minimapWidth = minimapWidth;
+        },
+        getMinimapWidth() {
+            return this._minimapWidth;
+        },
+        setMinimapHeight(minimapHeight) {
+            this._minimapHeight = minimapHeight;
+        },
+        getMinimapHeight() {
+            return this._minimapHeight;
+        },
+
+        _refreshMinimapZoom() {
+            var mostLeft = null;
+            var mostTop = null;
+
+            this.getSchemas().forEach(function(schema) {
+                var rect = schema.getBoundingClientRect();
+
+                if (mostLeft === null || mostLeft > rect.left) {
+                    mostLeft = rect.left;
+                }
+                if (mostTop === null || mostTop > rect.top) {
+                    mostTop = rect.top;
+                }
+            });
+
+            // TODO fix for width > height
+            var ratio = this.visualizer.offsetHeight / this.visualizer.offsetWidth;
+            var topHalf = (this.getMinimapWidth() - this.getMinimapHeight()) / 2;
+
+            this.width = 150 * this.visualizer.offsetWidth / this.getMinimapWidth() / this.getScale();
+            this.height = 150 * this.visualizer.offsetWidth / this.getMinimapWidth() / this.getScale() * ratio;
+
+            this.translate = {
+                x: 150 * (50 - mostLeft / this.getScale()) / this.getMinimapWidth(),
+                y: 150 * (topHalf - mostTop / this.getScale()) / this.getMinimapWidth()
+            };
+        },
+
+        refreshMinimap() {
+            this._schemas.forEach(function(schema) {
+               schema.remove();
+            });
+
+            var mostLeft = null;
+            var mostRight = null;
+            var mostTop = null;
+            var mostBottom = null;
+            this.getSchemas().forEach(function(schema) {
+                if (mostLeft === null || mostLeft > schema.getLeft()) {
+                    mostLeft = schema.getLeft();
+                }
+                if (mostTop === null || mostTop > schema.getTop()) {
+                    mostTop = schema.getTop();
+                }
+                if (mostRight === null || mostRight < schema.getLeft() + schema.getWidth()) {
+                    mostRight = schema.getLeft() + schema.getWidth();
+                }
+                if (mostBottom === null || mostBottom < schema.getTop() + schema.getHeight()) {
+                    mostBottom = schema.getTop() + schema.getHeight();
+                }
+            });
+
+            mostRight = mostRight + 50;
+            mostLeft = mostLeft - 50;
+            this.setMinimapWidth(Math.abs(mostRight - mostLeft));
+            this.setMinimapHeight(Math.abs(mostBottom - mostTop));
+
+            var ratio = this.getMinimapWidth() / 150;
+
+            var paddingTop = (150 - this.getMinimapHeight() / ratio) / 2;
+
+            this.getSchemas().forEach(function(schema) {
+                var schemaDiv = document.createElement('div');
+                schemaDiv.classList.add('schema');
+                schemaDiv.classList.add('database-minimap');
+                var left = (schema.getLeft() - mostLeft) / ratio;
+                var top = (schema.getTop() - mostTop) / ratio + paddingTop;
+                this.translate3d(left + 'px', top + 'px', '0px', schemaDiv);
+                schemaDiv.style.width = (schema.getWidth() / ratio) + "px";
+                schemaDiv.style.height = (schema.getHeight() / ratio) + "px";
+
+                schema.getTables().forEach(function(table) {
+                    var tableDiv = document.createElement('div');
+                    tableDiv.classList.add('table');
+                    tableDiv.classList.add('database-minimap');
+                    var left = table.translate.x / ratio;
+                    var top = table.translate.y / ratio + schema.getHeaderHeight() / ratio;
+                    this.translate3d(left + 'px', top + 'px', '0px', tableDiv);
+                    tableDiv.style.width = (table.offsetWidth / ratio) + "px";
+                    tableDiv.style.height = (table.offsetHeight / ratio) + "px";
+                    schemaDiv.appendChild(tableDiv);
+                }, this);
+
+                this.appendChild(schemaDiv);
+                this._schemas.push(schemaDiv);
+            }, this);
+            this._refreshMinimapZoom();
+        },
+
+        getSchemas() {
+            return this.visualizer._getSchemas();
+        },
+        getScale() {
+            return this.visualizer._getScale();
+        },
+
+        // Element Lifecycle
+        ready: function () {
+            // `ready` is called after all elements have been configured, but
+            // propagates bottom-up. This element's children are ready, but parents
+            // are not.
+            //
+            // This is the point where you should make modifications to the DOM (when
+            // necessary), or kick off any processes the element wants to perform.
+            this.classList.add('hidden');
+        },
+
+        attached: function () {
+            // `attached` fires once the element and its parents have been inserted
+            // into a document.
+            //
+            // This is a good place to perform any work related to your element's
+            // visual state or active behavior (measuring sizes, beginning animations,
+            // loading resources, etc).
+            this.visualizer = document.querySelector('database-visualizer');
+            this._schemas = [];
+        },
+
+
+        detached: function () {
+            // The analog to `attached`, `detached` fires when the element has been
+            // removed from a document.
+            //
+            // Use this to clean up anything you did in `attached`.
+        }
+
+    });
+
+</script>
+

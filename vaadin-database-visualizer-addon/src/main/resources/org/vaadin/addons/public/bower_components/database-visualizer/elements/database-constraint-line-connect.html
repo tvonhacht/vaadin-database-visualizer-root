@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Element Imports -->
+    <link rel="import" href="../../paper-fab/paper-fab.html">
+    <link rel="import" href="../../iron-icons/editor-icons.html">
+</head>
+
+<dom-module id="database-constraint-line-connect">
+    <style>
+
+        :host {
+            position: absolute;
+            width: auto;
+            height: auto;
+            z-index: 2;
+        }
+
+        paper-fab {
+            background: var(--database-constraint-line-connect-background, --accent-color);
+
+            --paper-fab-iron-icon: {
+                transform: rotate(90deg);
+            };
+        }
+    </style>
+    <template>
+        <paper-fab icon$="{{_icon(left)}}"></paper-fab>
+    </template>
+</dom-module>
+<script>
+    Polymer({
+        is: "database-constraint-line-connect",
+        listeners: {
+            'tap': '_handleTap'
+        },
+        properties: {
+            set: {
+                type: Boolean,
+                value: false
+            },
+            left: {
+                type: Boolean,
+                value: null,
+                observer: '_observerLeft'
+            },
+            translate: {
+                type: Object,
+                value: {
+                    x: 0,
+                    y: 0
+                },
+                observer: '_observerTranslate'
+            },
+            tablePos: {
+                type: Object,
+                value: {
+                    left: 0,
+                    top: 0,
+                    width: 0
+                },
+                observer: '_observerTablePos'
+            },
+            columnPos: {
+                type: Object,
+                value: {
+                    left: 0,
+                    top: 0
+                },
+                observer: '_observerColumnPos'
+            },
+            columnHeight: Number
+        },
+
+        ready: function () {
+        },
+
+        attached: function () {
+            this.async(function () {
+                this._observerTranslate(this.translate);
+            });
+        },
+
+        _observerTablePos() {
+            this._updatePos();
+        },
+
+        _observerLeft(left) {
+            if (left === null) {
+                this.set = false;
+                this.left = true;
+            }
+            this._updatePos();
+        },
+
+        _observerColumnPos() {
+           this._updatePos();
+        },
+
+        _updatePos() {
+            if (typeof this.tablePos === 'undefined' || typeof this.columnPos === 'undefined') {
+                return;
+            }
+            this.translate = {
+                x: this.tablePos.left + (this.left ? this.tablePos.width : 0),
+                y: this.tablePos.top + this.columnPos.top
+            };
+        },
+
+        _observerTranslate(translate) {
+            this.translate3d((translate.x + (this.left ? 5 : - this.offsetWidth - 5)) + 'px', (translate.y - this.offsetHeight / 2 + this.columnHeight) + 'px', '0px');
+        },
+
+        _icon(b) {
+            if (b) {
+                return 'editor:vertical-align-bottom';
+            }
+
+            return 'editor:vertical-align-top';
+        },
+
+        _handleTap() {
+            this.set = true;
+            this.left = !this.left;
+            this._refreshPath();
+            this._fireUpdateConstraint();
+        },
+
+        _refreshPath() {
+            Polymer.dom(this).getOwnerRoot().host.refreshPath();
+        },
+
+        _fireUpdateConstraint() {
+            Polymer.dom(this).getOwnerRoot().host.fireUpdateConstraint();
+        }
+    });
+</script>
+</html>

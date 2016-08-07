@@ -7,7 +7,7 @@
     -->
 
     <!-- Inherit add-on widgetset -->
-    <inherits name="org.vaadin.addons.WidgetSet" />
+    
 
     <!--
      Uncomment the following to compile the widgetset for one browser only.
@@ -21,4 +21,8 @@
     -->
     <!-- <set-property name="user.agent" value="safari"/> -->
 
+
+    <inherits name="com.vaadin.DefaultWidgetSet" />
+
+    <inherits name="org.vaadin.addons.WidgetSet" />
 </module>

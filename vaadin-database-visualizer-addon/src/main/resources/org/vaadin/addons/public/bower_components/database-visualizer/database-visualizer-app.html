@@ -1,0 +1,253 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../paper-drawer-panel/paper-drawer-panel.html">
+<link rel="import" href="../paper-fab/paper-fab.html">
+<link rel="import" href="database-visualizer.html">
+<link rel="import" href="elements/database-visualizer-menu.html">
+
+<!--
+<!--
+An element providing a solution for a visualization of a relational database with a menu.
+
+Example:
+
+    <database-visualizer-app></database-visualizer-app>
+
+### Database
+
+The database json structure should be build like this:
+
+    {
+        "id": 1,
+        "schemas": [
+            {
+                "id": 641148,
+                "name": "BP_ADMIN",
+                "schemaId": 701,
+                "left": -2000,
+                "top": -2000,
+                "width": 3926,
+                "height": 1852,
+                "tables": [
+                    {
+                        "id": 641164,
+                        "name": "DOCKER_APPLICATION_DEPLOYMENT",
+                        "tableId": 3770775,
+                        "left": 2877,
+                        "top": 765,
+                        "columns": [
+                            {
+                                "id": 641287,
+                                "name": "APPLICATION_DEPLOYMENT_ID",
+                                "columnId": 1,
+                                "keyType": "PK",
+                                "nullable": false,
+                                "type": "NUMBER(22)",
+                                "defaultValue": ""
+                            },
+                            …
+                        ],
+                        "constraints": [
+                            {
+                                "positions": [
+                                    {
+                                        "id": 653024,
+                                        "position": {
+                                            "x": 1,
+                                            "y": 2
+                                        },
+                                        …
+                                    }
+                                ],
+                                "isConnectedLeft": false,
+                                "isConnectedLeftRef": true,
+                                "id": 641403,
+                                "name": "FK_DOCK_APP_DEP_APP",
+                                "schema": "BP_ADMIN",
+                                "table": "DOCKER_APPLICATION_DEPLOYMENT",
+                                "columns": [
+                                    "APPLICATION_ID"
+                                ],
+                                "rschema": "BP_ADMIN",
+                                "rtable": "DOCKER_APPLICATION",
+                                "rcolumns": [
+                                    "APPLICATION_ID"
+                                ]
+                            }
+                        ]
+                    },
+                    …
+                ]
+            }
+        ]
+    }
+
+### Styling
+
+The following custom properties and mixins are available for styling:
+
+| Custom property | Description | Default |
+| --- | --- | --- |
+| `menu` |||
+| `--database-menu-bar-background` | The background color of the menu bar | `--dark-primary-color` |
+| `--database-menu-bar-color` | The color of the menu bar | `white` |
+| `--database-menu-selection-bar-color` | The color of the selection bar | `--accent-color` |
+| `--database-menu-search-focus-color` | The focus color of the search input | `--light-primary-color` |
+| `--database-menu-spinner-color` | The color of the spinner color of the menu | `--accent-color` |
+| `--database-menu-bar-ripple-color` | The color of the ripple of the menu bar | `--accent-color` |
+| `--database-menu-button-background` | The background color of the menu button | `--accent-color` |
+| `--database-menu-input-background` | The background color of the menu bar | `--primary-color` |
+| `--database-menu-input-container-input-color` | The input color of the input container | `white` |
+| `--database-menu-input-container-color` | The color of the input container | `--light-primary-color` |
+
+@demo
+-->
+<dom-module id="database-visualizer-app">
+
+    <style>
+        :host {
+            /*--database-visualizer-database-spinner-color: green;*/
+
+            /*--database-menu-bar-background: green;*/
+            /*--database-menu-bar-color: green;*/
+            /*--database-menu-selection-bar-color: green;*/
+            /*--database-menu-search-focus-color: green;*/
+            /*--database-menu-spinner-color: green;*/
+            /*--database-menu-bar-ripple-color: green;*/
+
+            /*--database-menu-input-background: green;*/
+            /*--database-menu-input-container-input-color: green;*/
+            /*--database-menu-input-container-color: green;*/
+
+            /*--database-table-background: green;*/
+            /*--database-table-color: green;*/
+            /*--database-table-selected-background: green;*/
+            /*--database-table-selected-color: green;*/
+
+            /*--database-schema-background: green;*/
+            /*--database-schema-color: green;*/
+            /*--database-schema-selected-background: green;*/
+            /*--database-schema-selected-color: green;*/
+            /*--database-schema-resize-button-background: green;*/
+
+            /*--database-column-higlight-background: green;*/
+            /*--database-column-higlight-color: green;*/
+            /*--database-column-even-background: green;*/
+
+            /*--database-constraint-hover-background: green;*/
+
+            /*--database-constraint-line-selected-stroke: green;*/
+            /*--database-constraint-line-highlighted-stroke: green;*/
+
+            /*--database-constraint-line-button-move-background: green;*/
+            /*--database-constraint-line-button-add-background: green;*/
+
+            /*--database-constraint-line-connect-background: green;*/
+        }
+
+        paper-drawer-panel {
+            --paper-drawer-panel-left-drawer-container: {
+                z-index: 40;
+            };
+            --paper-drawer-panel-scrim: {
+                z-index: 39;
+            };
+        }
+
+        #menu-button {
+            --paper-fab-background: var(--database-visualizer-menu-button-background, --accent-color);
+
+            position: absolute;
+            z-index: 1;
+            top: 10px;
+            left: 10px;
+        }
+    </style>
+
+    <template>
+        <paper-drawer-panel id="panel" responsive-width="3000px" edgeSwipeSensitivity="0">
+            <database-visualizer-menu id="menu" schemas={{schemas}} applications="{{applications}}" setups="{{setups}}"
+                                      drawer></database-visualizer-menu>
+            <div main>
+                <paper-fab id="menu-button" class="menu" icon="icons:menu" on-tap="_openMenu" title="menu"></paper-fab>
+                <database-visualizer database="{{database}}"></database-visualizer>
+            </div>
+        </paper-drawer-panel>
+    </template>
+
+</dom-module>
+
+<script>
+
+    Polymer({
+        is: 'database-visualizer-app',
+
+        properties: {
+            /**
+             * Fired when `schema` is selected.
+             *
+             * @event schema-selected
+             */
+            schemas: {
+                type: Array,
+                value: []
+            },
+            database: {
+                type: Object,
+                value: function () {
+                    return {};
+                }
+            }
+
+        },
+        _openMenu() {
+            this.$.panel.togglePanel();
+        },
+
+        // Element Lifecycle
+        ready: function () {
+            // `ready` is called after all elements have been configured, but
+            // propagates bottom-up. This element's children are ready, but parents
+            // are not.
+            //
+            // This is the point where you should make modifications to the DOM (when
+            // necessary), or kick off any processes the element wants to perform.
+
+
+            var menu = this.$.menu;
+            this.$.panel.addEventListener("iron-select", function(e) {
+                this.async(function() {
+                        menu.selectInput();
+                }, 300);
+            });
+        },
+
+        attached: function () {
+            // `attached` fires once the element and its parents have been inserted
+            // into a document.
+            //
+            // This is a good place to perform any work related to your element's
+            // visual state or active behavior (measuring sizes, beginning animations,
+            // loading resources, etc).
+        },
+
+
+        detached: function () {
+            // The analog to `attached`, `detached` fires when the element has been
+            // removed from a document.
+            //
+            // Use this to clean up anything you did in `attached`.
+        }
+
+    });
+
+</script>

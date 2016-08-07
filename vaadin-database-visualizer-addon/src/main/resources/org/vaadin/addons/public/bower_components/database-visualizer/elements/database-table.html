@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="database-column.html" rel="import">
+    <link href="database-constraint.html" rel="import">
+    <!--<link rel="import" href="../../paper-progress/paper-progress.html">-->
+    <!-- Element Imports -->
+</head>
+
+<dom-module id="database-table">
+    <style>
+        /* CSS rules for your element */
+
+        :host {
+            width: auto !important;
+            height: auto !important;
+            position: absolute;
+            display: inline-block;
+            box-sizing: border-box;
+            box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+            background: white;
+        }
+        :host.selected {
+            z-index: 4;
+        }
+
+        :host h3 {
+            margin: 0 !important;
+            font-size: 24px;
+            line-height: 2em;
+            text-align: center;
+            font-weight: bold;
+            color: var(--database-table-color, white);
+        }
+
+        #header {
+            background: var(--database-table-background, --primary-color);
+            padding: 10px 24px;
+            line-height: 56px;
+            font-size: 12px;
+            font-weight: 500;
+            border-bottom: 1px solid #e5e5e5;
+            cursor: move;
+        }
+        :host.selected #header {
+            background: var(--database-table-selected-background, --light-accent-color);
+            color: var(--database-table-selected-color, white);
+        }
+
+        #body {
+            background: white;
+            display: table;
+            width: 100%;
+        }
+
+        #footer {
+            border-top: #aaaaaa 4px double;
+        }
+    </style>
+    <template>
+
+        <div id="header" class$="database-visualizer-div-header">
+            <h3>{{table.name}}</h3>
+            <!--<paper-progress class="middle fit" value="60"></paper-progress>-->
+        </div>
+        <div id="body" class="database-visualizer-div-body">
+            <template is="dom-repeat" items="{{table.columns}}">
+                <database-column id="{{schemaname}}_{{table.name}}_{{item.name}}" schemaname="{{schemaname}}"
+                                 tablename="{{table.name}}" column="{{item}}"></database-column>
+            </template>
+        </div>
+        <div id="footer" class="database-visualizer-div-footer">
+            <template is="dom-repeat" items="{{table.constraints}}">
+                <database-constraint schemaname="{{schemaname}}" tablename="{{table.name}}"
+                                     constraint="{{item}}"></database-constraint>
+            </template>
+        </div>
+
+    </template>
+</dom-module>
+<script>
+    Polymer({
+        is: "database-table",
+        listeners: {
+            'header.tap': '_handleHeaderTap',
+            'header.track': '_handleHeaderTrack',
+            'track': '_handleTrack'
+        },
+        properties: {
+            selected: {
+                type: Boolean,
+                notify: true,
+                value: false,
+                observer: '_observerSelected'
+            },
+            translate: {
+                type: Object,
+                value: {
+                    x: 0,
+                    y: 0
+                },
+                observer: '_observerTranslate'
+            },
+            schemaname: String,
+            table: {
+                type: Object,
+                notify: true,
+                value: function () {
+                    return {
+                        name: "table1",
+                        columns: [{name: "column1"}],
+                        constraints: []
+                    };
+                }
+            },
+            _schema: {
+                type: Object,
+                notify: true,
+                value: function () {
+                    return {};
+                }
+            },
+            _columns: {
+                type: Array,
+                notify: true,
+                value: function () {
+                    return [];
+                }
+            },
+            _constraints: {
+                type: Array,
+                notify: true,
+                value: function () {
+                    return [];
+                }
+            }
+        },
+
+        _onHeaderTap: function () {
+            if (this.isSelected()) {
+                this.deselect();
+            } else {
+                this.select();
+            }
+        },
+        _handleHeaderTap: function (e) {
+            this._onHeaderTap();
+        },
+
+        _handleHeaderTrack: function (e) {
+            switch (e.detail.state) {
+                case 'start':
+                    this._beforeTrackSelected = this.isSelected();
+                    this.select();
+                    this._track = {
+                        x: this.translate.x,
+                        y: this.translate.y
+                    };
+                    this.getSchema()._track = {
+                        x: this.getSchema().translate.x,
+                        y: this.getSchema().translate.y
+                    };
+                    this.getSchema()._resize = {
+                        width: this.getSchema().width,
+                        height: this.getSchema().height
+                    };
+                    this.getSchema().getTables().forEach(function (table) {
+                        table._track = {
+                            x: table.translate.x,
+                            y: table.translate.y
+                        };
+                        table._constraints.forEach(function (constraint) {
+                            constraint._tracking = true;
+                        });
+                    });
+
+                    this._calcTrack(e);
+                    this.refresh();
+                    break;
+                case 'track':
+                    this._calcTrack(e);
+                    this.refresh();
+                    break;
+                case 'end':
+                    this._calcTrack(e);
+
+                    this.refresh();
+                    this.refreshMinimap();
+
+                    this.getSchema().getTables().forEach(function (table) {
+                        table._constraints.forEach(function (constraint) {
+                            constraint._tracking = false;
+                        });
+                    });
+
+                    if (!this._beforeTrackSelected) {
+                        this.deselect();
+                    }
+
+                    this.fireUpdateTable();
+                    this.getSchema().fireUpdateSchema();
+                    break;
+            }
+        },
+
+        _calcTrack: function (e) {
+            var tableX = this._track.x + e.detail.dx / this.getScale();
+            var tablesMoveX = 0;
+            var tableY = this._track.y + e.detail.dy / this.getScale();
+            var tablesMoveY = 0;
+            var schemaX = this.getSchema()._track.x;
+            var schemaY = this.getSchema()._track.y;
+            var width = null;
+            var height = null;
+
+            if (tableX < 0) {
+                schemaX += tableX;
+                width = this.getSchema()._resize.width - tableX;
+                tablesMoveX = tableX;
+                tableX = 0;
+            } else if (tableX + this.offsetWidth > this.getSchema()._resize.width) {
+                width = tableX + this.offsetWidth;
+            } else {
+                width = this.getSchema()._resize.width;
+            }
+            this.getSchema().width = width;
+
+            if (tableY < 0) {
+                schemaY += tableY;
+                height = this.getSchema()._resize.height - tableY;
+                tablesMoveY = tableY;
+                tableY = 0;
+            } else if (tableY + this.offsetHeight + this.getSchema().getHeaderHeight() > this.getSchema()._resize.height) {
+                height = tableY + this.offsetHeight + this.getSchema().getHeaderHeight();
+            } else {
+                height = this.getSchema()._resize.height;
+            }
+            this.getSchema().height = height;
+
+            this.getSchema().getTables().forEach(function (table) {
+                table.translate = {
+                    x: table._track.x - tablesMoveX,
+                    y: table._track.y - tablesMoveY
+                };
+            }, this);
+
+            this.getSchema().translate = {
+                x: schemaX,
+                y: schemaY
+            };
+
+            this.translate = {
+                x: tableX,
+                y: tableY
+            };
+        },
+
+        _handleTrack(e) {
+            if (e.target.classList.contains('table-column')) {
+                this.getSchema().visualizer._onTrack(e);
+            }
+        },
+
+        /** observer listening for selection changing **/
+        _observerSelected: function (selected) {
+            if (selected) {
+                this.classList.add('selected');
+            } else {
+                this.classList.remove('selected');
+            }
+
+            if (typeof this._constraints !== 'undefined') {
+                this._constraints.forEach(function (constraint) {
+                    if (selected) {
+                        constraint.highlight();
+                    } else {
+                        constraint.dehighlight();
+                    }
+                });
+            }
+        },
+
+        _observerTranslate(translate) {
+            this.translate3d(translate.x + 'px', translate.y + 'px', '0px');
+        },
+
+        setSchema(schema) {
+            this._schema = schema;
+        },
+        getSchema() {
+            return this._schema;
+        },
+
+        getScale() {
+            return this._schema.getScale();
+        },
+
+        isSelected() {
+            return this.selected;
+        },
+        select() {
+            this.selected = true;
+        },
+        deselect() {
+            this.selected = false;
+        },
+
+        getPosition() {
+            var parent = this.getSchema().getPosition();
+            //TODO remove?!
+            return {
+                left: this.translate.x + parseInt(parent.left, 10),
+                top: this.translate.y + parseInt(parent.top, 10),
+                width: this.offsetWidth,
+                height: this.offsetHeight
+            };
+        },
+
+        fireUpdateTable() {
+            this.fire('update-table', {
+                dvTableId: this.table.id,
+                left: Math.round(this.translate.x),
+                top: Math.round(this.translate.y)
+            });
+        },
+
+        ready: function () {
+
+        },
+
+        attached: function () {
+            /** find schema **/
+            this.setSchema(document.querySelector('#' + this.schemaname));
+
+            this.translate = {
+                x: this.table.left,
+                y: this.table.top
+            };
+        },
+
+        refresh() {
+            this._constraints.forEach(function (constraint) {
+                constraint.refreshConnector();
+                constraint.refresh();
+            });
+        },
+        refreshMinimap() {
+            this.getSchema().refreshMinimap();
+        },
+
+        registerColumn(column) {
+            this._columns.push(column);
+
+            if (this._columns.length === this.table.columns.length) {
+                this._constraints.forEach(function (constraint) {
+                    constraint.registerColumn(this._columns);
+                }, this);
+
+                this.getSchema().setMinWidth(this.translate.x + this.offsetWidth + this.getPadding());
+                this.getSchema().setMinHeight(this.translate.y + this.offsetHeight + this.getSchema().getHeaderHeight() + this.getPadding());
+            }
+
+            if (this._columns.length === this.table.columns.length && this._constraints.length === this.table.constraints.length) {
+                this.getSchema().registerTable(this);
+            }
+        },
+        registerConstraint(constraint) {
+            this._constraints.push(constraint);
+            if (this._columns.length === this.table.columns.length) {
+                constraint.registerColumn(this._columns);
+
+                this.getSchema().setMinWidth(this.translate.x + this.offsetWidth + this.getPadding());
+                this.getSchema().setMinHeight(this.translate.y + this.offsetHeight + this.getSchema().getHeaderHeight() + this.getPadding());
+            }
+
+            if (this._columns.length === this.table.columns.length && this._constraints.length === this.table.constraints.length) {
+                this.getSchema().registerTable(this);
+            }
+        },
+        getPadding() {
+            return 10;
+        }
+    });
+</script>
+</html>

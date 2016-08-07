@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Element Imports -->
+    <link rel="import" href="../../paper-fab/paper-fab.html">
+    <link rel="import" href="../../iron-icons/iron-icons.html">
+</head>
+
+<dom-module id="database-constraint-line-button">
+    <style>
+
+        :host {
+            position: absolute;
+            width: auto;
+            height: auto;
+            z-index: 2;
+        }
+
+        paper-fab[icon="add"] {
+            background: var(--database-constraint-line-button-add-background, --light-accent-color);
+        }
+        paper-fab[icon="open-with"] {
+            background: var(--database-constraint-line-button-move-background, --accent-color);
+        }
+
+    </style>
+    <template>
+        <paper-fab icon$="{{_icon(new)}}"></paper-fab>
+    </template>
+</dom-module>
+<script>
+    Polymer({
+        is: "database-constraint-line-button",
+        listeners: {
+            'tap': '_handleTap',
+            'track': '_handleTrack'
+        },
+        properties: {
+            new: {
+                type: Boolean,
+                value: true
+            },
+            index: {
+                type: Number,
+                value: null
+            },
+            translate: {
+                type: Object,
+                value: {
+                    x: 0,
+                    y: 0
+                },
+                observer: '_observerTranslate'
+            }
+        },
+
+        ready: function () {
+        },
+
+        attached: function () {
+            this.async(function () {
+                this._observerTranslate(this.translate);
+            })
+
+        },
+
+        _observerTranslate(translate) {
+            this.translate3d((translate.x - this.offsetWidth / 2) + 'px', (translate.y - this.offsetHeight / 2) + 'px', '0px');
+        },
+
+
+        _icon(b) {
+            if (b) {
+                return 'add';
+            }
+
+            this.style.zIndex = 3;
+            return 'open-with';
+        },
+
+        _onTap: function () {
+            if (this.new) {
+                this.new = false;
+                this._add();
+            }
+            this._select();
+        },
+        _onDblTap: function () {
+            this._remove();
+            this._fireUpdateConstraint();
+        },
+
+        _handleTap: function (e) {
+            if (this._tappedOneTime) {
+                this._tappedOneTime = false;
+                this._onDblTap();
+            } else {
+                this._onTap();
+            }
+
+            this._tappedOneTime = true;
+
+            // reset flag after 800ms
+            this.async(function () {
+                this._tappedOneTime = false;
+            }, 800);
+        },
+
+        _handleTrack: function (e) {
+            this._onTap();
+
+            switch (e.detail.state) {
+                case 'start':
+                    this._track = {
+                        x: this.translate.x,
+                        y: this.translate.y
+                    };
+                    this._trackStart();
+                    this.translate = {
+                        x: this._track.x + e.detail.dx / this._getScale(),
+                        y: this._track.y + e.detail.dy / this._getScale()
+                    };
+                    this._refresh();
+                    break;
+                case 'track':
+                    this.translate = {
+                        x: this._track.x + e.detail.dx / this._getScale(),
+                        y: this._track.y + e.detail.dy / this._getScale()
+                    };
+                    this._refresh();
+                    break;
+                case 'end':
+                    this.translate = {
+                        x: this._track.x + e.detail.dx / this._getScale(),
+                        y: this._track.y + e.detail.dy / this._getScale()
+                    };
+                    this._trackEnd();
+                    this._refresh();
+
+                    this._fireUpdateConstraint();
+                    break;
+            }
+        },
+
+        _getScale() {
+            return Polymer.dom(this).getOwnerRoot().host.getScale();
+        },
+
+        _refresh() {
+            Polymer.dom(this).getOwnerRoot().host.refreshPath();
+        },
+
+        _select() {
+            Polymer.dom(this).getOwnerRoot().host.select();
+        },
+
+        _remove() {
+            Polymer.dom(this).getOwnerRoot().host.removePoint(this);
+        },
+        _add() {
+            Polymer.dom(this).getOwnerRoot().host.addPoint(this);
+        },
+
+        _trackStart() {
+            Polymer.dom(this).getOwnerRoot().host.trackStart();
+        },
+        _trackEnd() {
+            Polymer.dom(this).getOwnerRoot().host.trackEnd();
+        },
+
+        _fireUpdateConstraint() {
+            Polymer.dom(this).getOwnerRoot().host.fireUpdateConstraint();
+        },
+
+        trackStartSchema() {
+            this._track = {
+                x: this.translate.x,
+                y: this.translate.y
+            };
+        },
+        trackSchema(trackPoint) {
+            this.translate = {
+                x: this._track.x + trackPoint.x,
+                y: this._track.y + trackPoint.y
+            };
+        }
+    });
+</script>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="database-constraint-line.html" rel="import">
+    <!-- Element Imports -->
+</head>
+
+<dom-module id="database-constraint">
+    <style>
+
+        :host {
+            padding: 5px;
+            display: block;
+            text-align: center;
+            cursor: pointer;
+        }
+        :host:hover {
+            background: var(--database-constraint-hover-background, --light-accent-color);
+            color: white;
+        }
+
+    </style>
+    <template>
+        {{constraint.name}}
+    </template>
+</dom-module>
+<script>
+    Polymer({
+        is: "database-constraint",
+        listeners: {
+            'tap': '_handleTap',
+            'mouseover': '_handleMouseover',
+            'mouseout': '_handleMouseout'
+        },
+        properties: {
+            constraint: {
+                type: Object,
+                notify: true,
+                value: function () {
+                    return {
+                        "name": "FK_Table1_Table2",
+                        "schema": "Schema1",
+                        "table": "Table1",
+                        "columns": ["Column1", "Column2"],
+                        "rSchema": "Schema1",
+                        "rTable": "Table2",
+                        "rColumns": ["Column3", "Column4"],
+                        "positions": []
+                    };
+                }
+            }
+        },
+
+        _handleTap: function () {
+            this.databaseConstraintLine.select();
+        },
+
+        _handleMouseover: function () {
+            this.databaseConstraintLine.highlight();
+        },
+        _handleMouseout: function () {
+            this.databaseConstraintLine.dehighlight();
+        },
+
+        ready: function () {
+
+        },
+
+        attached: function () {
+            this.databaseConstraintLine = document.createElement('database-constraint-line');
+            this.databaseConstraintLine.constraint = this.constraint;
+            document.querySelector('.database-constraints-storage').appendChild(this.databaseConstraintLine);
+        }
+    });
+</script>
+</html>
