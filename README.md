@@ -1,10 +1,12 @@
-# MyComponent Add-on for Vaadin 7
+# DatabaseVisualizer Add-on for Vaadin 7
 
-MyComponent is a UI component add-on for Vaadin 7.
+DatabaseVisualizer is a UI widget wrapper around the [Polymer Webcomponent](https://github.com/thorbenvh8/polymer-database-visualizer) add-on for Vaadin 7.
 
 ## Online demo
 
-Try the add-on demo at <url of the online demo>
+Try the polymer add-on demo [here](https://thorbenvh8.github.io/polymer-database-visualizer/demo/)
+
+![screenshot](screenshots/screenshot1.png)
 
 ## Download release
 
@@ -12,7 +14,7 @@ Official releases of this add-on are available at Vaadin Directory. For Maven in
 
 ## Building and running demo
 
-git clone <url of the MyComponent repository>
+git clone https://github.com/thorbenvh8/vaadin-database-visualizer-root.git
 mvn clean install
 cd demo
 mvn jetty:run
@@ -52,14 +54,12 @@ Debugging client side code in the vaadin-database-visualizer-demo project:
 ## Release notes
 
 ### Version 0.0.1-SNAPSHOT
-- ...
-- ...
+- init
 
 ## Roadmap
 
 This component is developed as a hobby with no public roadmap or any guarantees of upcoming releases. That said, the following features are planned for upcoming releases:
-- ...
-- ...
+- any ideas? :)
 
 ## Issue tracking
 
@@ -79,7 +79,7 @@ Contributions are welcome, but there are no guarantees that they are accepted as
 
 Add-on is distributed under Apache License 2.0. For license terms, see LICENSE.txt.
 
-MyComponent is written by <...>
+DatabaseVisualizer is written by Thorben von Hacht
 
 # Developer Guide
 
@@ -87,24 +87,19 @@ MyComponent is written by <...>
 
 Here is a simple example on how to try out the add-on component:
 
-<...>
+´´´java
+DatabaseVisualizer visualizer = new DatabaseVisualizer();
 
-For a more comprehensive example, see src/test/java/org/vaadin/template/demo/DemoUI.java
+DatabaseVisualizerSchema schema = new DatabaseVisualizerSchema();
+schema.setId(1L);
+schema.setName("schema");
+schema.addTable(table1);
+schema.addTable(table2);
+        
+DatabaseVisualizerDatabase database = new DatabaseVisualizerDatabase();
+database.addSchema(schema);
+        
+visualizer.setDatabase(database);
+´´´
 
-## Features
-
-### Feature A
-
-<...>
-
-### Feature B
-
-<...>
-
-### Feature C
-
-<...>
-
-## API
-
-MyComponent JavaDoc is available online at <...>
+For a more comprehensive example, see src/main/java/org/vaadin/addons/demo/DemoUI.java

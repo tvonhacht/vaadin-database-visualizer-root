@@ -16,7 +16,7 @@ import elemental.json.JsonArray;
 import elemental.json.JsonObject;
 
 // This is the server-side UI component that provides public API 
-// for MyComponent
+// for DatabaseVisualizer
 public class DatabaseVisualizer extends AbstractJavaScriptComponent {
 	private static final long serialVersionUID = 1L;
 	
@@ -73,7 +73,7 @@ public class DatabaseVisualizer extends AbstractJavaScriptComponent {
 		registerRpc(rpc);
 	}
 
-	// We must override getState() to cast the state to MyComponentState
+	// We must override getState() to cast the state to DatabaseVisualizerState
 	@Override
 	protected DatabaseVisualizerState getState() {
 		return (DatabaseVisualizerState) super.getState();

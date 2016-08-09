@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.vaadin.addons</groupId>
 	<artifactId>vaadin-database-visualizer-demo</artifactId>
 	<packaging>war</packaging>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>MyComponent Add-on Demo</name>
+	<version>0.0.2-SNAPSHOT</version>
+	<name>DatabaseVisualizer Add-on Demo</name>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -16,25 +15,23 @@
 		<vaadin.plugin.version>${vaadin.version}</vaadin.plugin.version>
 		<jetty.plugin.version>9.2.3.v20140905</jetty.plugin.version>
 	</properties>
-
-    <!--     
+    
 	<organization>
 		<name>My Name</name>
-		<url>https://github.com/mygithubaccount/MyComponent/</url>
+		<url>https://github.com/thorbenvh8/vaadin-database-visualizer-root/</url>
 	</organization>
     
 	<scm>
-		<url>git://github.com/mygithubaccount/MyComponent.git</url>
-		<connection>scm:git:git://github.com/mygithubaccount/MyComponent.git</connection>
-		<developerConnection>scm:git:ssh://git@github.com:/mygithubaccount/${ComponentClassName}.git</developerConnection>
-		<tag>MyComponent add-on for Vaadin</tag>
+		<url>git://github.com/thorbenvh8/vaadin-database-visualizer-root.git</url>
+		<connection>scm:git:git://github.com/thorbenvh8/vaadin-database-visualizer-root.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com:/thorbenvh8/vaadin-database-visualizer-root.git</developerConnection>
+		<tag>DatabaseVisualizer add-on for Vaadin</tag>
 	</scm>
 
 	<issueManagement>
 		<system>GitHub</system>
-		<url>https://github.com/mygithubaccount/MyComponent/issues</url>
+		<url>https://github.com/thorbenvh8/vaadin-database-visualizer-root/issues</url>
 	</issueManagement>
-    -->
 
 	<licenses>
 		<license>
