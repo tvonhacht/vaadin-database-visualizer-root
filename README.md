@@ -87,7 +87,7 @@ DatabaseVisualizer is written by Thorben von Hacht
 
 Here is a simple example on how to try out the add-on component:
 
-´´´java
+```java
 DatabaseVisualizer visualizer = new DatabaseVisualizer();
 
 DatabaseVisualizerSchema schema = new DatabaseVisualizerSchema();
@@ -100,6 +100,6 @@ DatabaseVisualizerDatabase database = new DatabaseVisualizerDatabase();
 database.addSchema(schema);
         
 visualizer.setDatabase(database);
-´´´
+```
 
 For a more comprehensive example, see src/main/java/org/vaadin/addons/demo/DemoUI.java
