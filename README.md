@@ -10,14 +10,14 @@ Try the polymer add-on demo [here](https://thorbenvh8.github.io/polymer-database
 
 ## Download release
 
-Official releases of this add-on are available at Vaadin Directory. For Maven instructions, download and reviews, go to http://vaadin.com/addon/vaadin-database-visualizer
+Official releases of this add-on are available at Vaadin Directory. For Maven instructions, download and reviews, go to https://vaadin.com/directory#!addon/databasevisualizer-add-on
 
 ## Building and running demo
 
-git clone https://github.com/thorbenvh8/vaadin-database-visualizer-root.git
-mvn clean install
-cd demo
-mvn jetty:run
+    git clone https://github.com/thorbenvh8/vaadin-database-visualizer-root.git
+    mvn clean install
+    cd vaadin-database-visualizer-demo
+    mvn jetty:run
 
 To see the demo, navigate to http://localhost:8080/
 
